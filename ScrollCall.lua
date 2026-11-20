@@ -236,15 +236,17 @@ function SC.CheckKnown()
   SC.need = SC.known and FS.Missing(SC.NEEDS) or nil
   if SC.known and not SC.need then FS.Learned(KEY) end
 end
+-- Spellbook re-read out of combat only; PLAYER_REGEN_ENABLED re-reads it, so a change skipped in combat is picked up.
+local function recheck() if not C.InCombat() then SC.CheckKnown(); SC.Update() end end
 local function refresh()
   SC.CheckKnown()
   SC.snapshot = SC.ReadBags(); SC.unread = SC.Unread(SC.snapshot); SC.Update()
 end
 local handlers = {
-  PLAYER_LOGIN = refresh, SPELLS_CHANGED = function() if not C.InCombat() then SC.CheckKnown(); SC.Update() end end,
+  PLAYER_LOGIN = refresh, SPELLS_CHANGED = recheck,
   BAG_UPDATE_DELAYED = SC.OnBags,
   PLAYER_REGEN_DISABLED = function() FS.State(KEY, "hidden") end,
-  PLAYER_REGEN_ENABLED = function() SC.Update() end,
+  PLAYER_REGEN_ENABLED = recheck,
   UNIT_SPELLCAST_SUCCEEDED = function(unit, _, spellID) if unit == "player" then SC.OnCast(spellID) end end,
 }
 ev:SetScript("OnEvent", function(_, event, ...)
@@ -256,7 +258,7 @@ ev:SetScript("OnEvent", function(_, event, ...)
     KennyScrollCallDB = db
     SC.last = db.log[1]
     row = FS.Register(KEY, db, { title = L["Scroll Call"], slash = SC.Slash, help = "(toggle) | log | reset | debug", debug = Core.PrintDebug,
-      refresh = function() if not C.InCombat() then SC.CheckKnown(); SC.Update() end end })
+      refresh = recheck })
     if ns.Hub and ns.Hub.AddTooltip then ns.Hub.AddTooltip(ADDON, 61, SC.Tooltip) end
     return
   end
