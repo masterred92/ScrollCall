@@ -32,6 +32,7 @@ ns.Core.AddLocale("enUS", {
   ["scale"] = true,
   ["soulbound"] = true,
   ["text"] = true,
+  ["uncertain, other loot mixed in:"] = true,
   ["unread scroll"] = true,
   ["unread scrolls"] = true,
   ["unread: READ"] = true,

@@ -20,6 +20,11 @@ It never reads, casts, sells or moves anything for you.
 | `cast` | the game shows your own Comprehend Scroll casts to addons | your bags before the cast are compared with your bags after it. Whatever appeared, once a scroll has left, is the result. If a scroll left and nothing appeared within 5 seconds, it logs `nothing new in your bags`. |
 | `bags` | cast events are hidden, or none seen yet | a read is logged when exactly one untranslated scroll leaves your bags and something new appears in the same bag update. These entries are marked `(from bags)`. |
 
+If a scroll leaves your bags before the cast event arrives, the bags from before the read are kept until the read resolves,
+so the result is still found. If the change isn't just "one scroll out, one item in" (other loot landed in the same window,
+or another item left your bags), the entry is marked `uncertain, other loot mixed in` and kept **out of the gold total**.
+The session total reads `~1g 20s before AH cut`.
+
 `/frost scroll debug` shows the mode and the counts.
 
 Item and spell IDs come from the game's tables for build 1.60.1.70862: 17 untranslated scrolls (ItemSparse) and the five

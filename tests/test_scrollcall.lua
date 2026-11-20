@@ -61,6 +61,35 @@ S.cast(COMP); bags({})
 W.advance(6)
 check(SC.EntryText(SC.last) == "nothing new in your bags", "nothing appeared: said so")
 
+-- 5b. Review fixes: mixed diffs are flagged and kept out of the gold total; the pre-read snapshot survives a bag update
+-- that arrives before the cast event; a read logged from bags just before its cast event isn't counted twice.
+prices = { [900006] = { p = 10000, t = 1 }, [900007] = { p = 50000, t = 1 }, [900008] = { p = 30000, t = 1 } }
+bags({ { UPDOG, 1 }, { 900001, 1 } })
+local worth0, reads0 = KennyScrollCallDB.session.worth, KennyScrollCallDB.session.reads
+S.cast(COMP)
+bags({ { 900001, 1 }, { 900006, 1 }, { 900007, 1 } })
+check(SC.last.uncertain and SC.EntryText(SC.last):find("uncertain"), "two new items in the read window: flagged uncertain")
+check(KennyScrollCallDB.session.worth == worth0 and KennyScrollCallDB.session.reads == reads0 + 1, "uncertain read kept out of the gold total")
+bags({ { UPDOG, 1 } }); S.cast(COMP)
+bags({ { 900008, 1 }, { 900006, 1 } }) -- result + something else left the bags (sold / moved) in the same update
+check(SC.last.uncertain, "result with another item leaving: uncertain")
+-- bag update (scroll gone) before the cast event; the result lands after
+bags({ { KWYJIBO, 1 } })
+local n0 = #KennyScrollCallDB.log
+bags({})
+check(SC.held ~= nil and SC.snapshot.counts[KWYJIBO] == 1, "scroll left first: pre-read bags kept")
+S.cast(COMP)
+bags({ { 900008, 1 } })
+check(#KennyScrollCallDB.log == n0 + 1 and SC.last.how == "cast" and not SC.last.uncertain and SC.last.items[1].itemID == 900008,
+  "result after an early bag update: one clean cast read")
+check(KennyScrollCallDB.session.worth == worth0 + 30000, "clean read counted in the gold total")
+-- result already in the bags when the cast event arrives: logged once, as a cast
+bags({ { UPDOG, 1 } }); n0 = #KennyScrollCallDB.log
+bags({ { 900006, 1 } })
+S.cast(COMP)
+check(#KennyScrollCallDB.log == n0 + 1 and SC.last.how == "cast" and SC.pending == nil, "bags-first read not logged twice")
+check(row.statusText:find("before AH cut"), "session total says before AH cut")
+
 -- 6. Combat hides it; /frost scroll toggles; log / reset / debug; tooltip.
 bags({ { UPDOG, 1 } })
 W.combat = true; W.fire("PLAYER_REGEN_DISABLED")

@@ -67,19 +67,22 @@ function SC.Unread(snap)
   for id in pairs(SC.SCROLLS) do n = n + ((snap and snap.counts[id]) or 0) end
   return n
 end
--- gained = { {itemID, count} }, scrollsUsed = n
+-- gained = { {itemID, count} }, scrollsUsed = n, otherLeft = true when a non-scroll item also left the bags
 function SC.Diff(before, after)
-  local gained, used = {}, 0
+  local gained, used, otherLeft = {}, 0, false
   for id, n in pairs(after.counts) do
     local d = n - (before.counts[id] or 0)
     if d > 0 and not SC.SCROLLS[id] then gained[#gained + 1] = { id, d } end
+  end
+  for id, n in pairs(before.counts) do
+    if not SC.SCROLLS[id] and (after.counts[id] or 0) < n then otherLeft = true end
   end
   for id in pairs(SC.SCROLLS) do
     local d = (before.counts[id] or 0) - (after.counts[id] or 0)
     if d > 0 then used = used + d end
   end
   table.sort(gained, function(a, b) return a[1] < b[1] end)
-  return gained, used
+  return gained, used, otherLeft
 end
 
 function SC.Price(id)
@@ -95,18 +98,20 @@ local function itemName(id, snap)
   return n or ("item " .. id)
 end
 
--- One logged read. how = "cast" or "bags".
-function SC.Log(gained, after, how)
-  local e = { t = C.Now(), how = how, items = {} }
+-- One logged read. how = "cast" or "bags". uncertain = the bag change wasn't only "one scroll out, one item in" (other
+-- loot or items moved in the same window): the entry is flagged and kept out of the gold total.
+function SC.Log(gained, after, how, uncertain)
+  local e = { t = C.Now(), how = how, items = {}, uncertain = uncertain or nil }
   local s = db.session
   s.reads = s.reads + 1
   for _, g in ipairs(gained) do
     local id, n = g[1], g[2]
     local it = { itemID = id, count = n, name = itemName(id, after) }
-    if after.bound[id] then it.bound = true; s.bound = s.bound + 1
+    if after.bound[id] then it.bound = true; if not uncertain then s.bound = s.bound + 1 end
     else
       local p = SC.Price(id)
-      if p then it.price = p * n; s.worth = s.worth + it.price else s.unpriced = s.unpriced + 1 end
+      if p then it.price = p * n; if not uncertain then s.worth = s.worth + it.price end
+      elseif not uncertain then s.unpriced = s.unpriced + 1 end
     end
     e.items[#e.items + 1] = it
   end
@@ -119,12 +124,13 @@ end
 function SC.EntryText(e)
   if not e then return nil end
   if #e.items == 0 then return L["nothing new in your bags"] end
+  local pre = e.uncertain and (L["uncertain, other loot mixed in:"] .. " ") or ""
   local parts = {}
   for _, it in ipairs(e.items) do
     local v = it.bound and L["soulbound"] or (it.price and ("~" .. SC.Money(it.price) .. " " .. L["before AH cut"]) or L["no price scan"])
     parts[#parts + 1] = ("%s%s: %s"):format(it.name, it.count > 1 and (" x" .. it.count) or "", v)
   end
-  return table.concat(parts, ", ") .. (e.how == "bags" and (" " .. L["(from bags)"]) or "")
+  return pre .. table.concat(parts, ", ") .. (e.how == "bags" and (" " .. L["(from bags)"]) or "")
 end
 
 function SC.Mode()
@@ -132,24 +138,35 @@ function SC.Mode()
   return "bags"
 end
 
+local function mixed(gained, used, otherLeft) return used ~= 1 or #gained ~= 1 or otherLeft end
+
+-- Bag update. While a cast is pending, or after a scroll left with nothing new yet ("held"), the pre-read snapshot is
+-- kept, so the result is always compared with the bags from before the read.
 function SC.OnBags()
   local after = SC.ReadBags()
   if not after then return end
   local before = SC.snapshot
+  SC.lastBags = nil -- only the bag update right before a cast event can be that cast's read
   if SC.pending and before then
-    local gained, used = SC.Diff(before, after)
-    if #gained > 0 and used > 0 then SC.Log(gained, after, "cast"); SC.pending = nil; SC.snapshot = after
+    local gained, used, otherLeft = SC.Diff(before, after)
+    if #gained > 0 and used > 0 then SC.Log(gained, after, "cast", mixed(gained, used, otherLeft)); SC.pending = nil; SC.held = nil; SC.snapshot = after
     elseif C.Clock() - SC.pending > WAIT then
       if used > 0 then SC.Log({}, after, "cast") end
-      SC.pending = nil; SC.snapshot = after
+      SC.pending = nil; SC.held = nil; SC.snapshot = after
     end -- else: keep the pre-cast snapshot and wait for the result to land
-  else
-    if before then
-      local gained, used = SC.Diff(before, after)
-      if used == 1 and #gained > 0 then SC.Log(gained, after, "bags") end
-    end
-    SC.snapshot = after
-  end
+  elseif before then
+    local gained, used, otherLeft = SC.Diff(before, after)
+    if used == 1 and #gained > 0 then
+      SC.lastBags = { e = SC.Log(gained, after, "bags", mixed(gained, used, otherLeft)), at = C.Clock() }
+      SC.held = nil; SC.snapshot = after
+    elseif used == 1 and #gained == 0 and not otherLeft and (not SC.held or C.Clock() - SC.held <= WAIT) then
+      -- a scroll left before its result (or before the cast event): hold the pre-read bags
+      if not SC.held then
+        SC.held = C.Clock()
+        C_Timer.After(WAIT + 0.5, function() if SC.held then Core.SafeCall("bags", SC.OnBags) end end)
+      end
+    else SC.held = nil; SC.snapshot = after end
+  else SC.snapshot = after end
   SC.unread = SC.Unread(after)
   SC.Update()
 end
@@ -158,6 +175,8 @@ function SC.OnCast(spellID)
   if C.IsSecret(spellID) then SC.hiddenCasts = SC.hiddenCasts + 1; return end
   if not SC.COMPREHEND[spellID] then return end
   SC.plainCasts = SC.plainCasts + 1
+  -- the bag update came first and already logged this read from the bags: it was this cast
+  if SC.lastBags and C.Clock() - SC.lastBags.at < 2 then SC.lastBags.e.how = "cast"; SC.lastBags = nil; SC.Update(); return end
   SC.snapshot = SC.snapshot or SC.ReadBags()
   SC.pending = C.Clock()
   C_Timer.After(WAIT + 0.5, function() if SC.pending then Core.SafeCall("bags", SC.OnBags) end end)
@@ -172,7 +191,7 @@ function SC.Update()
   FS.Headline(KEY, SC.unread > 0 and ("%d %s"):format(SC.unread, SC.unread == 1 and L["unread scroll"] or L["unread scrolls"]) or L["No unread scrolls."], "Snow")
   FS.ClearLines(KEY)
   FS.Line(KEY, 1, "|cffffd100" .. L["Last:"] .. "|r " .. (SC.EntryText(SC.last) or L["none read yet"]))
-  FS.Status(KEY, ("%s %d · ~%s"):format(L["read"], s.reads, SC.Money(s.worth)), "Mist")
+  FS.Status(KEY, ("%s %d · ~%s %s"):format(L["read"], s.reads, SC.Money(s.worth), L["before AH cut"]), "Mist")
   FS.State(KEY, "active")
 end
 
@@ -186,7 +205,7 @@ function SC.DetectionLines()
   return {
     ("mode: %s  (cast = Comprehend Scroll casts seen, bags = only bag changes); plain casts %d, hidden cast events %d"):format(SC.Mode(), SC.plainCasts, SC.hiddenCasts),
     ("unread scrolls: %d; waiting for a result: %s"):format(SC.unread, tostring(SC.pending ~= nil)),
-    ("session: %d read, ~%s before AH cut, %d soulbound, %d without a price scan"):format(s.reads, SC.Money(s.worth), s.bound, s.unpriced),
+    ("session: %d read, ~%s before AH cut (uncertain reads left out), %d soulbound, %d without a price scan"):format(s.reads, SC.Money(s.worth), s.bound, s.unpriced),
   }
 end
 
