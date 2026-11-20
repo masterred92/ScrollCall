@@ -89,6 +89,9 @@ bags({ { 900006, 1 } })
 S.cast(COMP)
 check(#KennyScrollCallDB.log == n0 + 1 and SC.last.how == "cast" and SC.pending == nil, "bags-first read not logged twice")
 check(row.statusText:find("before AH cut"), "session total says before AH cut")
+W.advance(1.1)
+check(not row.status.shown and row.statusLine.shown and row.statusSlot == 2 and row.h == 78,
+  "r4: session total is too long for the title line, so it moves to body line 2 (box 78)")
 
 -- 6. Combat hides it; /frost scroll toggles; log / reset / debug; tooltip.
 bags({ { UPDOG, 1 } })
