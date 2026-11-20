@@ -1,0 +1,18 @@
+## Interface: 16001
+## Title: Scroll Call
+## Notes: A gold log for a Mage's Comprehension: how many untranslated scrolls you carry, and what each one you read turned into, priced from your own PriceLog scans. Part of the Frost Suite; works alone.
+## Author: Kenny
+## Version: 1.0.0
+## SavedVariables: KennyScrollCallDB
+## OptionalDeps: PriceLog
+## X-License: MIT
+## IconTexture: 8188276
+## X-Category: Professions
+## X-Website: https://github.com/masterred92/ScrollCall
+
+Libs\KennyShared\Compat.lua
+Libs\KennyShared\Core.lua
+Libs\KennyShared\Hub.lua
+Libs\FrostSuite\FrostSuite.lua
+Locales\enUS.lua
+ScrollCall.lua
