@@ -30,6 +30,12 @@ The session total reads `~1g 20s before AH cut`.
 Item and spell IDs come from the game's tables for build 1.60.1.70862: 17 untranslated scrolls (ItemSparse) and the five
 Comprehend Scroll spell IDs (SpellName).
 
+## Low-level Mages
+
+Until you have Comprehension, the box shows one calm line, like `Learn Comprehension to read scrolls`, and a small
+**Hide until I learn** button. It only shows when you carry an untranslated scroll. The button hides the box on that character only, and the box comes back by
+itself when you learn what it needs. Other classes never see it.
+
 ## Commands
 
 The Frost Suite has no per-addon slash commands, only `/frost <sub>`. That keeps the risk of clashing with other addons low.

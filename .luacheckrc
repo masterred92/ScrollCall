@@ -6,6 +6,6 @@ globals = { "KennyScrollCall", "KennyScrollCallDB", "FrostSuite_1_0", "SLASH_FRO
 -- WoW API (checked against Blizzard's UI source by tools/verify_api.py).
 read_globals = { "C_Container", "C_Item", "NUM_BAG_SLOTS",
   -- used by Libs/FrostSuite
-  "C_ClassTalents", "C_Secrets", "C_SpellBook", "C_Timer", "C_Traits", "C_UnitAuras", "GameTooltip", "PlaySoundFile", "UnitAffectingCombat", "UnitClass",
+  "C_ClassTalents", "C_Secrets", "C_SpellBook", "C_Timer", "C_Traits", "C_UnitAuras", "GameTooltip", "PlaySoundFile", "UnitAffectingCombat", "UnitClass", "UnitLevel", "UnitName",
   -- used by the shared KennyShared library (Libs/KennyShared)
   "C_AddOns", "C_AuctionHouse", "C_Container", "C_Item", "C_RestrictedActions", "CreateFrame", "Enum", "GetBuildInfo", "GetLocale", "GetMoney", "GetMoneyString", "GetRealZoneText", "GetRealmName", "GetSubZoneText", "GetTime", "ItemRefTooltip", "LibStub", "NUM_BAG_SLOTS", "NUM_TOTAL_EQUIPPED_BAG_SLOTS", "TooltipDataProcessor", "UIParent", "UnitFactionGroup", "date", "issecretvalue", "time" }

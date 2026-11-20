@@ -27,6 +27,9 @@ SC.SCROLLS = {}
 for _, id in ipairs({ 211780, 211784, 211785, 211786, 211787, 211853, 211854, 211855, 213543, 213544, 213545, 213546, 213547,
   281015, 281016, 281017, 281018 }) do SC.SCROLLS[id] = true end
 SC.COMPREHEND = { [1296017] = true, [1309965] = true, [1309973] = true, [1310029] = true, [1310030] = true }
+-- Comprehension is a Mage-only skill line (3012). Its trainer level isn't in the client data (SpellLevels.BaseLevel 0 for
+-- 1296017, build 1.60.1.71037), so the line names no level.
+SC.NEEDS = { { name = L["Comprehension"], spells = SC.COMPREHEND, text = L["Learn Comprehension to read scrolls"] } }
 
 local db, row
 local migrations = {}
@@ -187,6 +190,7 @@ function SC.Showing() return not C.InCombat() and (SC.unread > 0 or SC.asked) en
 function SC.Update()
   if not row then return end
   if not SC.Showing() or not SC.known then FS.State(KEY, "hidden"); return end
+  if SC.need then FS.NotYet(KEY, SC.need); return end
   local s = db.session
   FS.Headline(KEY, SC.unread > 0 and ("%d %s"):format(SC.unread, SC.unread == 1 and L["unread scroll"] or L["unread scrolls"]) or L["No unread scrolls."], "Snow")
   FS.ClearLines(KEY)
@@ -196,7 +200,7 @@ function SC.Update()
 end
 
 function SC.Tooltip(tooltip, itemID)
-  if not SC.SCROLLS[itemID] or not FS.IsMage() then return end
+  if not SC.SCROLLS[itemID] or not FS.IsMage() or SC.need then return end -- no READ prompt before Comprehension is learned
   tooltip:AddLine("Scroll Call: " .. L["unread: READ"], 0.85, 0.95, 1)
 end
 
@@ -204,7 +208,7 @@ function SC.DetectionLines()
   local s = db and db.session or newSession()
   return {
     ("mode: %s  (cast = Comprehend Scroll casts seen, bags = only bag changes); plain casts %d, hidden cast events %d"):format(SC.Mode(), SC.plainCasts, SC.hiddenCasts),
-    ("unread scrolls: %d; waiting for a result: %s"):format(SC.unread, tostring(SC.pending ~= nil)),
+    ("unread scrolls: %d; waiting for a result: %s; knows Comprehend Scroll: %s"):format(SC.unread, tostring(SC.pending ~= nil), tostring(SC.need == nil)),
     ("session: %d read, ~%s before AH cut (uncertain reads left out), %d soulbound, %d without a price scan"):format(s.reads, SC.Money(s.worth), s.bound, s.unpriced),
   }
 end
@@ -226,12 +230,18 @@ ev:RegisterEvent("ADDON_LOADED")
 for _, e in ipairs({ "PLAYER_LOGIN", "SPELLS_CHANGED", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" }) do ev:RegisterEvent(e) end
 ev:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
 SC.known = true
-local function refresh()
+-- Not a Mage: hidden. A Mage without Comprehend Scroll yet: SC.need (the box, when it shows, says to learn it).
+function SC.CheckKnown()
   SC.known = FS.IsMage()
+  SC.need = SC.known and FS.Missing(SC.NEEDS) or nil
+  if SC.known and not SC.need then FS.Learned(KEY) end
+end
+local function refresh()
+  SC.CheckKnown()
   SC.snapshot = SC.ReadBags(); SC.unread = SC.Unread(SC.snapshot); SC.Update()
 end
 local handlers = {
-  PLAYER_LOGIN = refresh, SPELLS_CHANGED = function() if not C.InCombat() then SC.known = FS.IsMage(); SC.Update() end end,
+  PLAYER_LOGIN = refresh, SPELLS_CHANGED = function() if not C.InCombat() then SC.CheckKnown(); SC.Update() end end,
   BAG_UPDATE_DELAYED = SC.OnBags,
   PLAYER_REGEN_DISABLED = function() FS.State(KEY, "hidden") end,
   PLAYER_REGEN_ENABLED = function() SC.Update() end,
@@ -245,7 +255,8 @@ ev:SetScript("OnEvent", function(_, event, ...)
     db.log = db.log or {}
     KennyScrollCallDB = db
     SC.last = db.log[1]
-    row = FS.Register(KEY, db, { title = L["Scroll Call"], slash = SC.Slash, help = "(toggle) | log | reset | debug", debug = Core.PrintDebug })
+    row = FS.Register(KEY, db, { title = L["Scroll Call"], slash = SC.Slash, help = "(toggle) | log | reset | debug", debug = Core.PrintDebug,
+      refresh = function() if not C.InCombat() then SC.CheckKnown(); SC.Update() end end })
     if ns.Hub and ns.Hub.AddTooltip then ns.Hub.AddTooltip(ADDON, 61, SC.Tooltip) end
     return
   end
