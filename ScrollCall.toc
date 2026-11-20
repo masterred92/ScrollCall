@@ -9,6 +9,8 @@
 ## IconTexture: 8188276
 ## X-Category: Professions
 ## X-Website: https://github.com/masterred92/ScrollCall
+## X-Curse-Project-ID: 1819381
+## X-Wago-ID: nKWw83KE
 
 Libs\KennyShared\Compat.lua
 Libs\KennyShared\Core.lua
