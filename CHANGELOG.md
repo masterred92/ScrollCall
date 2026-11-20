@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 (Nov 20, 2026)
+
+- Layout fixes (FrostSuite-1.0 r4, shared by the suite): a status too long to sit beside the title moves to its own line instead of running into it, and box heights fit their text.
+- The session total moves to its own line below the title.
+
 ## 1.0.0 (Nov 20, 2026)
 
 First release, part of the Frost Suite.

@@ -1,6 +1,6 @@
 # Scroll Call
 
-A gold log for a Mage's **Comprehension** on **WoW: Forever** (Interface 16001). Version 1.0.0. Part of Kenny's Frost Suite,
+A gold log for a Mage's **Comprehension** on **WoW: Forever** (Interface 16001). Version 1.0.1. Part of Kenny's Frost Suite,
 and it works alone.
 
 Untranslated scrolls ("A Mage can decipher this with their Comprehension skill.") pile up in your bags. Scroll Call:

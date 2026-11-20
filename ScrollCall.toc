@@ -2,7 +2,7 @@
 ## Title: Scroll Call
 ## Notes: A gold log for a Mage's Comprehension: how many untranslated scrolls you carry, and what each one you read turned into, priced from your own PriceLog scans. Part of the Frost Suite; works alone.
 ## Author: Kenny
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: KennyScrollCallDB
 ## OptionalDeps: PriceLog
 ## X-License: MIT
