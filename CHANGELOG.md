@@ -4,7 +4,7 @@
 
 - Layout fixes (FrostSuite-1.0 r4, shared by the suite): a status too long to sit beside the title moves to its own line instead of running into it, and box heights fit their text.
 - The session total moves to its own line below the title.
-- Low-level Mages (FrostSuite-1.0 r5, shared by the suite): until you have Comprehension the box shows one calm line, e.g. `Learn Comprehension to read scrolls`, with a small **Hide until I learn** button (saved per character). It steps aside in combat and comes back by itself as soon as you learn it (checked when you learn a spell, level up, change talents or leave combat). The READ prompt on scroll tooltips waits until Comprehension is learned.
+- Low-level Mages (FrostSuite-1.0 r6, shared by the suite): until you have Comprehension the box shows one calm line, e.g. `Learn Comprehension to read scrolls`, with a small **Hide until I learn** button (saved per character). It steps aside in combat and comes back by itself as soon as you learn it (checked when you learn a spell, level up, change talents or leave combat). The READ prompt on scroll tooltips waits until Comprehension is learned.
 
 ## 1.0.0 (Nov 20, 2026)
 
